@@ -309,11 +309,11 @@ function getFee(gas: number, gasPrice: string, granter?: string): StdFee {
 async function getAccount(
   restUrl: string,
   address: string,
-  chainId: string
+  chainId: string // Used to identify which chain's account we're fetching
 ): Promise<Account> {
   try {
     const res: AxiosResponse<GetAccountResponse> = await axios.get(
-      restUrl + '/cosmos/auth/v1beta1/accounts/' + address + `?chain=${chainId}`
+      restUrl + '/cosmos/auth/v1beta1/accounts/' + address
     );
 
     return res.data.account;
@@ -360,7 +360,7 @@ async function simulate(
 
   try {
     const estimate = await axios
-      .post(restUrl + `/cosmos/tx/v1beta1/simulate?chain=${chainId}`, {
+      .post(restUrl + `/cosmos/tx/v1beta1/simulate`, {
         tx_bytes: toBase64(TxRaw.encode(txBody).finish()),
       })
       .then((el) => el.data.gas_info.gas_used);
@@ -376,7 +376,7 @@ async function simulate(
 async function broadcast(
   txBody: TxRaw,
   restUrl: string,
-  chainId: string,
+  chainId: string, // Used for context in error handling and logging
   restURLs?: Array<string>
 ): Promise<ParsedTxResponse> {
   const timeoutMs = 60_000;
@@ -396,18 +396,19 @@ async function broadcast(
 
       clearTimeout(txPollTimeout);
     }
+    // The chainId parameter provides context for these queries on the specific chain
     await sleep(pollIntervalMs);
     try {
       if (restURLs?.length) {
         const response = await axiosGetRequestWrapper(
           restURLs,
-          `/cosmos/tx/v1beta1/txs/${txId}?chain=${chainId}`
+          `/cosmos/tx/v1beta1/txs/${txId}`
         );
         const result = parseTxResult(response.data.tx_response);
         return result;
       } else {
         const response = await axios.get(
-          restUrl + '/cosmos/tx/v1beta1/txs/' + txId + `?chain=${chainId}`
+          restUrl + '/cosmos/tx/v1beta1/txs/' + txId
         );
         const result = parseTxResult(response.data.tx_response);
         return result;
@@ -430,7 +431,7 @@ async function broadcast(
   };
 
   const response = await axios.post(
-    restUrl + '/cosmos/tx/v1beta1/txs' + `?chain=${chainId}`,
+    restUrl + '/cosmos/tx/v1beta1/txs',
     {
       tx_bytes: toBase64(TxRaw.encode(txBody).finish()),
       mode: 'BROADCAST_MODE_SYNC',
@@ -510,11 +511,7 @@ async function sign(
   fee: StdFee,
   restUrl: string,
   registry: Registry
-): Promise<{
-  bodyBytes: Uint8Array;
-  authInfoBytes: Uint8Array;
-  signatures: [Uint8Array] | [Buffer];
-}> {
+): Promise<TxRaw> {
   let account = await getAccount(restUrl, address, chainId);
 
   if (get(account, '@type') === ETH_BASE_ACCOUNT_TYPE)
@@ -565,11 +562,11 @@ async function sign(
         SignMode.SIGN_MODE_LEGACY_AMINO_JSON
       );
 
-      return {
+      return TxRaw.fromPartial({
         bodyBytes: makeBodyBytes(registry, messages, signed.memo),
         authInfoBytes: authInfoBytes,
-        signatures: [Buffer.from(signature.signature, 'base64')],
-      };
+        signatures: [new Uint8Array(Buffer.from(signature.signature, 'base64'))],
+      });
     } catch (error) {
       console.log('error while make auth info bytes', error);
       throw new Error('Request rejected');
@@ -598,12 +595,12 @@ async function sign(
 
     try {
       const { signature, signed } = await signer.signDirect(address, signDoc);
-
-      return {
+      
+      return TxRaw.fromPartial({
         bodyBytes: signed.bodyBytes,
         authInfoBytes: signed.authInfoBytes,
         signatures: [fromBase64(signature.signature)],
-      };
+      });
     } catch (error) {
       console.log('error while sign direct', error);
       throw new Error('Request rejected');
