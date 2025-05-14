@@ -32,6 +32,29 @@ const nextConfig = {
       },
     ],
   },
+  
+  // Add rewrites for API proxy to avoid CORS issues
+  async rewrites() {
+    return [
+      {
+        source: '/prysm-api/:path*',
+        destination: 'https://prysm-api-devnet.kleomedes.network/:path*',
+      },
+      {
+        source: '/prysm-rpc/:path*',
+        destination: 'https://prysm-rpc-devnet.kleomedes.network/:path*',
+      },
+      // Additional fallback proxies for other Prysm providers
+      {
+        source: '/prysm-polkachu-api/:path*',
+        destination: 'https://prysm-testnet-api.polkachu.com/:path*',
+      },
+      {
+        source: '/prysm-polkachu-rpc/:path*',
+        destination: 'https://prysm-testnet-rpc.polkachu.com/:path*',
+      }
+    ];
+  },
 };
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
