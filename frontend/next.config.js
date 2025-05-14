@@ -52,6 +52,11 @@ const nextConfig = {
       {
         source: '/prysm-polkachu-rpc/:path*',
         destination: 'https://prysm-testnet-rpc.polkachu.com/:path*',
+      },
+      // Proxy for Keybase API
+      {
+        source: '/keybase-api/:path*',
+        destination: 'https://keybase.io/_/api/1.0/:path*',
       }
     ];
   },

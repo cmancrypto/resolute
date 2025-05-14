@@ -52,7 +52,7 @@ export const TRANSFERS_TAB2 = {
 };
 export const SEND_TX_FEE = 25000;
 export const VALIDATOR_LOGO_URL = (identity: string) =>
-  `https://keybase.io/_/api/1.0/user/lookup.json?key_suffix=${identity}&fields=pictures`;
+  `/keybase-api/user/lookup.json?key_suffix=${identity}&fields=pictures`;
 export const VALIDATORS_PER_PAGE = 7;
 export const CLOSE_ICON_PATH = '/close-icon.svg';
 export const STAKING_DIALOG_IMAGE_PATH = '/delegate-popup-image.png';
@@ -405,6 +405,6 @@ export const AUTHZ = 'authz';
 export const FEEGRANT = 'feegrant';
 export const TXN_BUILDER_DESCRIPTION =
   'Transaction builder allows to create single transaction with multiple messages of same or different type.';
-export const GENERAL_SETTINGS_DESCRIPTION = 'Settings to enhance your application’s functionality';
+export const GENERAL_SETTINGS_DESCRIPTION = "Settings to enhance your application's functionality";
 export const SUCCESS = 'SUCCESS';
 export const FAILED = 'FAILED';
