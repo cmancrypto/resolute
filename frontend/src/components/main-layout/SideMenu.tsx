@@ -182,6 +182,25 @@ const MoreOptions = ({
                   </div>
                 </Tooltip>
               </div>
+              <div
+                className={`flex gap-2 items-center pl-3 ${isDisabled('ibc-swap').disabled ? 'opacity-20 cursor-not-allowed' : ''}`}
+              >
+                <div className="w-5"></div>
+                <Tooltip
+                  title={isDisabled('ibc-swap').tooltip}
+                  placement="top-end"
+                >
+                  <div
+                    onClick={() => {
+                      if (!isDisabled('ibc-swap').disabled)
+                        changeTransfersPath('skip');
+                    }}
+                    className={`hover:font-semibold ${isDisabled('ibc-swap').disabled ? '!cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    Skip Transfers
+                  </div>
+                </Tooltip>
+              </div>
             </div>
           )}
         </div>

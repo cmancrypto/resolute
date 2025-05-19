@@ -112,3 +112,4 @@ build.zip
 resolute.zip
 
 server/config.yaml
+node_modules

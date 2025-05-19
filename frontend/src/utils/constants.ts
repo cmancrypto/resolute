@@ -398,6 +398,10 @@ export const TRANSFERS_TYPES: Record<
     description:
       'Exchange of assets between different networks using the Inter-Blockchain Communication protocol',
   },
+  skip: {
+    title: 'Skip Transfers',
+    description: 'Transfer tokens across different networks using Skip Protocol',
+  },
 };
 export const ALL_NETWORKS_GRADIENT =
   'linear-gradient(180deg, #6155b275 0.5%, #12131C80 100%)';

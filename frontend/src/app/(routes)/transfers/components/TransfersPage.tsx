@@ -4,6 +4,7 @@ import useSortedAssets from '@/custom-hooks/useSortedAssets';
 import { useSearchParams } from 'next/navigation';
 import MultiSendPage from './multi-send/MultiSendPage';
 import IBCSwapPage from './ibc-swaps/IBCSwapPage';
+import SkipTransferPage from './skip-transfers/SkipTransferPage';
 import { setConnectWalletOpen } from '@/store/features/wallet/walletSlice';
 import EmptyScreen from '@/components/common/EmptyScreen';
 import PageHeader from '@/components/common/PageHeader';
@@ -59,6 +60,7 @@ const TransfersPage = ({ chainIDs }: { chainIDs: string[] }) => {
             <MultiSendPage chainID={chainIDs[0]} />
           ) : null}
           {transferType === 'ibc-swap' ? <IBCSwapPage /> : null}
+          {transferType === 'skip' ? <SkipTransferPage /> : null}
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center min-h-[80vh]">
