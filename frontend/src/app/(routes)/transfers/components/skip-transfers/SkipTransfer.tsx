@@ -14,10 +14,10 @@ const SkipTransfer = () => {
 
   // Custom theme configuration to match Resolute styling
   const resoluteTheme = {
-    brandColor: '#6155B2', // Resolute's primary purple
+    brandColor: 'linear-gradient(48deg, rgb(255 255 255 / 3%) 0%, rgb(153 153 153 / 25%) 100%)', // Resolute's primary colours
     primary: {
       background: {
-        normal: '#6155B2', // Primary button background
+        normal: '#12131C', // Gradient background
       },
       text: {
         normal: '#FFFFFF', // White text on primary elements
@@ -28,7 +28,7 @@ const SkipTransfer = () => {
     },
     secondary: {
       background: {
-        normal: '#12131C', // Dark background
+        normal: 'linear-gradient(180deg, rgba(68, 83, 223, 0.1) 12.5%, rgba(127, 92, 237, 0.1) 100%)', // Gradient for secondary elements
         transparent: 'rgba(18, 19, 28, 0.8)', // Semi-transparent dark background
         hover: '#1D1E2C', // Slightly lighter on hover
       },
