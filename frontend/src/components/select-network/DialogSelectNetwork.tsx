@@ -18,14 +18,19 @@ import useHandleRouteChange from '@/custom-hooks/routing/useHandleRouteChange';
 const DialogSelectNetwork = () => {
   useHandleRouteChange();
   const dispatch = useAppDispatch();
-  const pathName = usePathname();
+  const pathName = usePathname() as string;
   const searchParams = useSearchParams();
   const { getChainNamesAndLogos } = useGetChainInfo();
   const chains = getChainNamesAndLogos();
 
   const [searchQuery, setSearchQuery] = useState('');
-
+  
   const pathParts = pathName.split('/');
+
+  // Early return if searchParams is not available
+  if (!searchParams) {
+    return null;
+  }
 
   const dialogOpen = useAppSelector(
     (state) => state.common.changeNetworkDialog.open
@@ -122,7 +127,7 @@ const DialogSelectNetwork = () => {
           <Link
             href={constructAllNetworksUrl(pathParts)}
             onClick={() => {
-              dispatch(setSelectedNetwork({ chainName: '' }));
+              dispatch(setSelectedNetwork({ chainName: '', isTestnet: false }));
               onClose();
             }}
             className={`network-item justify-center ${selectedNetwork.chainName?.length ? '' : 'bg-[#FFFFFF14] !border-transparent'}`}
