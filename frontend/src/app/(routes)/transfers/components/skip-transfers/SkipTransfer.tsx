@@ -4,6 +4,7 @@ import { useAppSelector } from '@/custom-hooks/StateHooks';
 
 const SkipTransfer = () => {
   const selectedChain = useAppSelector((state) => state.common.selectedNetwork.chainName);
+  const isTestnet = useAppSelector((state) => state.common.selectedNetwork.isTestnet);
   const [srcChainId, setSrcChainId] = useState<string | undefined>(undefined);
   
   useEffect(() => {
@@ -59,6 +60,7 @@ const SkipTransfer = () => {
           defaultRoute={{
             srcChainId: srcChainId
           }}
+          onlyTestnet={isTestnet}
         />
       </div>
     </div>

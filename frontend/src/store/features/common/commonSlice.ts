@@ -39,10 +39,12 @@ const initialState: CommonState = {
   },
   selectedNetwork: {
     chainName: '',
+    isTestnet: false,
   },
   allNetworksInfo: {},
   nameToChainIDs: {},
   addNetworkOpen: false,
+
 };
 
 export const getTokenPrice = createAsyncThunk(
@@ -117,6 +119,12 @@ export const commonSlice = createSlice({
     },
     setSelectedNetwork: (state, action: PayloadAction<SelectedNetwork>) => {
       state.selectedNetwork.chainName = action.payload.chainName;
+      const chainID = state.nameToChainIDs[action.payload.chainName.toLowerCase()];
+      if (chainID) {
+        state.selectedNetwork.isTestnet = state.allNetworksInfo[chainID]?.isTestnet || false;
+      } else {
+        state.selectedNetwork.isTestnet = false;
+      }
     },
     setAllNetworksInfo: (state) => {
       state.allNetworksInfo = {};
