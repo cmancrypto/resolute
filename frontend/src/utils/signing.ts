@@ -308,8 +308,7 @@ function getFee(gas: number, gasPrice: string, granter?: string): StdFee {
 
 async function getAccount(
   restUrl: string,
-  address: string,
-  chainId: string // Used to identify which chain's account we're fetching
+  address: string
 ): Promise<Account> {
   try {
     const res: AxiosResponse<GetAccountResponse> = await axios.get(
@@ -339,7 +338,7 @@ async function simulate(
   chainId: string,
   granter?: string
 ): Promise<number> {
-  const account = await getAccount(restUrl, address, chainId);
+  const account = await getAccount(restUrl, address);
   const fee = getFee(50_000, gasPrice, granter);
   const amount: Coin[] = fee.amount.map((coin) => {
     return { amount: coin.amount, denom: coin.denom };
@@ -512,7 +511,7 @@ async function sign(
   restUrl: string,
   registry: Registry
 ): Promise<TxRaw> {
-  let account = await getAccount(restUrl, address, chainId);
+  let account = await getAccount(restUrl, address);
 
   if (get(account, '@type') === ETH_BASE_ACCOUNT_TYPE)
     account = {
