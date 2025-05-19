@@ -33,7 +33,7 @@ interface TokensInfoState {
 
 interface SelectedNetwork {
   chainName: string;
-  isTestnet: boolean;
+  isTestnet?: boolean;
 }
 
 interface AllTokensInfoState {

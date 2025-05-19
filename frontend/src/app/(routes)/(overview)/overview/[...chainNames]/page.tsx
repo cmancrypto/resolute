@@ -11,7 +11,7 @@ import WithoutConnectionIllustration from '@/components/illustrations/WithoutCon
 import OverviewDashboard from '../../overview-components/OverviewDashboard';
 
 const Overview = () => {
-  const params = useParams();
+  const params = useParams() as { chainNames: string | string[] };
   const paramChains = params.chainNames;
   const chainNames =
     typeof paramChains === 'string' ? [paramChains] : paramChains;
