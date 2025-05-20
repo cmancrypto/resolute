@@ -34,6 +34,7 @@ interface TokensInfoState {
 interface SelectedNetwork {
   chainName: string;
   isTestnet?: boolean;
+  chainId?: string;
 }
 
 interface AllTokensInfoState {

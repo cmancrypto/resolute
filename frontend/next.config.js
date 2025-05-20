@@ -60,7 +60,13 @@ const nextConfig = {
       {
         source: '/keybase-api/:path*',
         destination: 'https://keybase.io/_/api/1.0/:path*',
-      }
+      },
+      // You can add a fallback rewrite if needed
+      // {
+      //   source: '/:path*',
+      //   destination: `${process.env.FALLBACK_URL || 'https://your-default-api.com'}/:path*`,
+      //   basePath: false
+      // }
     ];
   },
 };

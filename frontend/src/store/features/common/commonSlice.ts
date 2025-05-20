@@ -122,8 +122,10 @@ export const commonSlice = createSlice({
       const chainID = state.nameToChainIDs[action.payload.chainName.toLowerCase()];
       if (chainID) {
         state.selectedNetwork.isTestnet = state.allNetworksInfo[chainID]?.isTestnet || false;
+        state.selectedNetwork.chainId = chainID;
       } else {
         state.selectedNetwork.isTestnet = false;
+        state.selectedNetwork.chainId = undefined;
       }
     },
     setAllNetworksInfo: (state) => {

@@ -11,6 +11,12 @@ import { Box, Tooltip } from '@mui/material';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 
+// Utility function to get chainId from chainName
+export const getChainIdFromName = (nameToChainIDs: Record<string, string>, chainName: string): string | undefined => {
+  if (!chainName || !nameToChainIDs) return undefined;
+  return nameToChainIDs[chainName.toLowerCase()];
+};
+
 const SelectNetwork = () => {
   const dispatch = useAppDispatch();
   const [walletAddress, setWalletAddress] = useState('');
@@ -31,14 +37,18 @@ const SelectNetwork = () => {
 
   useEffect(() => {
     if (selectedNetwork.chainName && allNetworks) {
-      const chainID = nameToChainIDs[selectedNetwork.chainName];
-      setChainLogo(allNetworks?.[chainID]?.logos?.menu || ALL_NETWORKS_ICON);
-      setChainGradient(allNetworks?.[chainID]?.config?.theme?.gradient);
+      const chainID = getChainIdFromName(nameToChainIDs, selectedNetwork.chainName);
+      if (chainID) {
+        setChainLogo(allNetworks?.[chainID]?.logos?.menu || ALL_NETWORKS_ICON);
+        setChainGradient(allNetworks?.[chainID]?.config?.theme?.gradient);
+      }
     }
     if (selectedNetwork.chainName && isWalletConnected) {
-      const chainID = nameToChainIDs[selectedNetwork.chainName];
-      setWalletAddress(networks[chainID]?.walletInfo.bech32Address);
-      setChainLogo(allNetworks?.[chainID]?.logos?.menu || ALL_NETWORKS_ICON);
+      const chainID = getChainIdFromName(nameToChainIDs, selectedNetwork.chainName);
+      if (chainID) {
+        setWalletAddress(networks[chainID]?.walletInfo.bech32Address);
+        setChainLogo(allNetworks?.[chainID]?.logos?.menu || ALL_NETWORKS_ICON);
+      }
     } else if (!selectedNetwork.chainName) {
       setWalletAddress('');
       setChainLogo(ALL_NETWORKS_ICON);
@@ -49,7 +59,7 @@ const SelectNetwork = () => {
         networks?.[COSMOS_CHAIN_ID]?.walletInfo?.bech32Address || ''
       );
     }
-  }, [selectedNetwork, isWalletConnected, allNetworks]);
+  }, [selectedNetwork, isWalletConnected, allNetworks, nameToChainIDs, networks]);
 
   return (
     <div className="fixed-top w-full">

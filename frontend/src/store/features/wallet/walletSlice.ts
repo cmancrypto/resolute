@@ -78,9 +78,10 @@ export const establishWalletConnection = createAsyncThunk(
         (mainnet) => mainnet.config.chainId
       );
       try {
+        console.log('Attempting to enable chains:', chainIDs);
         await window.wallet.enable(chainIDs);
       } catch (error) {
-        console.log('caught', error);
+        console.log('Error enabling chains:', error);
       }
 
       let walletName = '';
@@ -92,14 +93,21 @@ export const establishWalletConnection = createAsyncThunk(
       for (let i = 0; i < networks.length; i++) {
         const chainId = networks[i].config.chainId;
         try {
+          if (!networks[i].config.rpc || !networks[i].config.rpc.startsWith('http')) {
+            console.warn(`Invalid RPC URL for ${networks[i].config.chainName}: ${networks[i].config.rpc}`);
+            continue;
+          }
+          
           if (
             (data.walletName === 'keplr' ||
               data.walletName === 'cosmostation') &&
             networks[i].keplrExperimental
           ) {
+            console.log(`Suggesting experimental chain for ${data.walletName}:`, networks[i].config);
             await window.wallet.experimentalSuggestChain(networks[i].config);
           }
           if (data.walletName === 'leap' && networks[i].leapExperimental) {
+            console.log(`Suggesting experimental chain for leap:`, networks[i].config);
             await window.wallet.experimentalSuggestChain(networks[i].config);
           }
           await getWalletAmino(chainId);
@@ -122,12 +130,6 @@ export const establishWalletConnection = createAsyncThunk(
           console.log(
             `unable to connect to network ${networks[i].config.chainName}: `,
             error
-          );
-          dispatch(
-            setError({
-              type: 'error',
-              message: `Unable to connect to network ${networks[i].config.chainName}`,
-            })
           );
         }
       }

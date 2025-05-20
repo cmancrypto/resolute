@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Widget } from '@skip-go/widget';
 import { useAppSelector } from '@/custom-hooks/StateHooks';
+import { getChainIdFromName } from '@/components/main-layout/SelectNetwork';
 
 const SkipTransfer = () => {
   const selectedChain = useAppSelector((state) => state.common.selectedNetwork.chainName);
   const isTestnet = useAppSelector((state) => state.common.selectedNetwork.isTestnet);
-  const [srcChainId, setSrcChainId] = useState<string | undefined>(undefined);
+  const nameToChainIDs = useAppSelector((state) => state.common.nameToChainIDs);
   
-  useEffect(() => {
-    if (selectedChain) {
-      setSrcChainId(selectedChain);
-    }
-  }, [selectedChain]);
+  // Get chainId directly from state, or derive it from chainName if not available
+  const chainIdFromState = useAppSelector((state) => state.common.selectedNetwork.chainId);
+  const derivedChainId = selectedChain ? getChainIdFromName(nameToChainIDs, selectedChain) : undefined;
+  
+  // Use the chainId from state if available, otherwise fall back to the derived value
+  const chainId = chainIdFromState || derivedChainId;
 
   // Custom theme configuration to match Resolute styling
   const resoluteTheme = {
@@ -47,6 +49,8 @@ const SkipTransfer = () => {
     },
   };
 
+  console.log('chainid', chainId);
+
   return (
     <div className="flex flex-col items-center w-full max-w-[500px] mx-auto">
       <div
@@ -57,9 +61,7 @@ const SkipTransfer = () => {
       >
         <Widget
           theme={resoluteTheme}
-          defaultRoute={{
-            srcChainId: srcChainId
-          }}
+
           onlyTestnet={isTestnet}
         />
       </div>

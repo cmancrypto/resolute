@@ -28,8 +28,8 @@ export const networks: Network[] = [
     config: {
       chainId: 'prysm-devnet-1',
       chainName: 'PrysmDevnet',
-      rest: '/prysm-api',
-      rpc: '/prysm-rpc',
+      rest: 'https://prysm-api-devnet.kleomedes.network',
+      rpc: 'https://prysm-rpc-devnet.kleomedes.network',
       restURIs: [
         '/prysm-api',
         '/prysm-polkachu-api',
