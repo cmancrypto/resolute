@@ -308,11 +308,12 @@ function getFee(gas: number, gasPrice: string, granter?: string): StdFee {
 
 async function getAccount(
   restUrl: string,
-  address: string
+  address: string,
+  chainId: string
 ): Promise<Account> {
   try {
     const res: AxiosResponse<GetAccountResponse> = await axios.get(
-      restUrl + '/cosmos/auth/v1beta1/accounts/' + address
+      restUrl + '/cosmos/auth/v1beta1/accounts/' + address + `?chain=${chainId}`
     );
 
     return res.data.account;
@@ -338,7 +339,7 @@ async function simulate(
   chainId: string,
   granter?: string
 ): Promise<number> {
-  const account = await getAccount(restUrl, address);
+  const account = await getAccount(restUrl, address,chainId);
   const fee = getFee(50_000, gasPrice, granter);
   const amount: Coin[] = fee.amount.map((coin) => {
     return { amount: coin.amount, denom: coin.denom };
@@ -359,7 +360,7 @@ async function simulate(
 
   try {
     const estimate = await axios
-      .post(restUrl + `/cosmos/tx/v1beta1/simulate`, {
+      .post(restUrl + `/cosmos/tx/v1beta1/simulate?chain=${chainId}`, {
         tx_bytes: toBase64(TxRaw.encode(txBody).finish()),
       })
       .then((el) => el.data.gas_info.gas_used);
@@ -375,7 +376,7 @@ async function simulate(
 async function broadcast(
   txBody: TxRaw,
   restUrl: string,
-  chainId: string, // Used for context in error handling and logging
+  chainId: string,
   restURLs?: Array<string>
 ): Promise<ParsedTxResponse> {
   const timeoutMs = 60_000;
@@ -395,19 +396,18 @@ async function broadcast(
 
       clearTimeout(txPollTimeout);
     }
-    // The chainId parameter provides context for these queries on the specific chain
     await sleep(pollIntervalMs);
     try {
       if (restURLs?.length) {
         const response = await axiosGetRequestWrapper(
           restURLs,
-          `/cosmos/tx/v1beta1/txs/${txId}`
+          `/cosmos/tx/v1beta1/txs/${txId}?chain=${chainId}`
         );
         const result = parseTxResult(response.data.tx_response);
         return result;
       } else {
         const response = await axios.get(
-          restUrl + '/cosmos/tx/v1beta1/txs/' + txId
+          restUrl + '/cosmos/tx/v1beta1/txs/' + txId + `?chain=${chainId}`
         );
         const result = parseTxResult(response.data.tx_response);
         return result;
@@ -430,7 +430,7 @@ async function broadcast(
   };
 
   const response = await axios.post(
-    restUrl + '/cosmos/tx/v1beta1/txs',
+    restUrl + '/cosmos/tx/v1beta1/txs' + `?chain=${chainId}`,
     {
       tx_bytes: toBase64(TxRaw.encode(txBody).finish()),
       mode: 'BROADCAST_MODE_SYNC',
@@ -510,8 +510,12 @@ async function sign(
   fee: StdFee,
   restUrl: string,
   registry: Registry
-): Promise<TxRaw> {
-  let account = await getAccount(restUrl, address);
+): Promise<{
+  bodyBytes: Uint8Array;
+  authInfoBytes: Uint8Array;
+  signatures: Uint8Array[];
+}> {
+  let account = await getAccount(restUrl, address, chainId);
 
   if (get(account, '@type') === ETH_BASE_ACCOUNT_TYPE)
     account = {
@@ -561,11 +565,11 @@ async function sign(
         SignMode.SIGN_MODE_LEGACY_AMINO_JSON
       );
 
-      return TxRaw.fromPartial({
+      return {
         bodyBytes: makeBodyBytes(registry, messages, signed.memo),
         authInfoBytes: authInfoBytes,
         signatures: [new Uint8Array(Buffer.from(signature.signature, 'base64'))],
-      });
+      };
     } catch (error) {
       console.log('error while make auth info bytes', error);
       throw new Error('Request rejected');
@@ -594,12 +598,12 @@ async function sign(
 
     try {
       const { signature, signed } = await signer.signDirect(address, signDoc);
-      
-      return TxRaw.fromPartial({
+
+      return {
         bodyBytes: signed.bodyBytes,
         authInfoBytes: signed.authInfoBytes,
         signatures: [fromBase64(signature.signature)],
-      });
+      };
     } catch (error) {
       console.log('error while sign direct', error);
       throw new Error('Request rejected');

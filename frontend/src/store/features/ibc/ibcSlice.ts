@@ -28,7 +28,6 @@ export const trackTx = createAsyncThunk(
     { rejectWithValue, dispatch }
   ) => {
     const onDestChainTxSuccess = (chainID: string, txHash: string) => {
-      // chainID is used to identify which chain's pending transactions to update
       dispatch(removeFromPending({ chainID, txHash }));
       dispatch(
       updateIBCTransactionStatus({ txHash })
@@ -57,7 +56,7 @@ export const txTransfer = createAsyncThunk(
     const onSourceChainTxSuccess = async (chainID: string, txHash: string) => {
       dispatch(resetTxStatus());
       const response = await axios.get(
-        data.rest + '/cosmos/tx/v1beta1/txs/' + txHash
+        data.rest + '/cosmos/tx/v1beta1/txs/' + txHash+ `?chain=${data.sourceChainID}`
       );
       const msgs = response?.data?.tx?.body?.messages || [];
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -114,7 +113,6 @@ export const txTransfer = createAsyncThunk(
       txHash: string,
       destChain: string
     ) => {
-      // chainID identifies which chain's pending transactions need to be updated
       dispatch(removeFromPending({ chainID, txHash }));
       dispatch(
         updateIBCTransactionStatus({ txHash })

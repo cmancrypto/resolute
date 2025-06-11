@@ -8,9 +8,7 @@ export const axiosGetRequestWrapper = async (
   let errMsg = '';
 
   try {
-    // Remove chainID param from the request URL to use direct Cosmos endpoints
-    const cleanedEndpoint = endPoint.replace(/[?&]chain=[\w-]+(&|$)/, (match, p1) => p1 ? p1 : '');
-    const uri = `${cleanURL(baseURIs[0])}${cleanedEndpoint}`;
+    const uri = `${cleanURL(baseURIs[0])}${endPoint}`;
     return await Axios.get(uri);
     /* eslint-disable @typescript-eslint/no-explicit-any */
   } catch (err: any) {
