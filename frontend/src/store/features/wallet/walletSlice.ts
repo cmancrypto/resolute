@@ -26,6 +26,7 @@ interface ChainInfo {
     bech32Address: string;
     isKeystone: string;
     algo: string;
+    address?: string;
   };
   network: Network;
 }
@@ -112,17 +113,29 @@ export const establishWalletConnection = createAsyncThunk(
           }
           await getWalletAmino(chainId);
           const walletInfo = await window.wallet.getKey(chainId);
-          walletInfo.pubKey = Buffer.from(walletInfo?.pubKey).toString(
-            'base64'
-          );
-          walletName = walletInfo?.name;
-          isNanoLedger = walletInfo?.isNanoLedger || false;
+          
+          // Ensure all walletInfo fields are serializable
+          const serializedWalletInfo = {
+            name: walletInfo?.name || '',
+            isNanoLedger: walletInfo?.isNanoLedger || false,
+            pubKey: Buffer.from(walletInfo?.pubKey).toString('base64'),
+            bech32Address: walletInfo?.bech32Address || '',
+            isKeystone: walletInfo?.isKeystone || '',
+            algo: walletInfo?.algo || '',
+            // Handle potential Uint8Array address field
+            address: (walletInfo?.address && walletInfo.address.constructor?.name === 'Uint8Array')
+              ? Buffer.from(walletInfo.address).toString('hex')
+              : walletInfo?.address || ''
+          };
+          
+          walletName = serializedWalletInfo.name;
+          isNanoLedger = serializedWalletInfo.isNanoLedger;
           chainInfos[chainId] = {
-            walletInfo: walletInfo,
+            walletInfo: serializedWalletInfo,
             network: networks[i],
           };
           if (anyNetworkAddress === '')
-            anyNetworkAddress = walletInfo?.bech32Address || '';
+            anyNetworkAddress = serializedWalletInfo.bech32Address || '';
           nameToChainIDs[
             networks[i].config.chainName.toLowerCase().split(' ').join('')
           ] = chainId;
@@ -196,15 +209,23 @@ export const establishMetamaskConnection = createAsyncThunk(
       try {
         if (NotSupportedMetamaskChainIds.indexOf(chainId) === -1) {
           const walletInfo = await getKey(chainId);
+          
+          // Ensure all walletInfo fields are serializable for MetaMask
+          const serializedWalletInfo = {
+            algo: walletInfo?.algo || '',
+            bech32Address: walletInfo?.address || '',
+            pubKey: Buffer.from(walletInfo?.pubkey).toString('base64'),
+            isKeystone: '',
+            isNanoLedger: false,
+            name: walletInfo?.address || '',
+            // Handle potential Uint8Array address field
+            address: (walletInfo?.address && walletInfo.address.constructor?.name === 'Uint8Array')
+              ? Buffer.from(walletInfo.address).toString('hex')
+              : walletInfo?.address || ''
+          };
+          
           const chainInfo: ChainInfo = {
-            walletInfo: {
-              algo: walletInfo?.algo,
-              bech32Address: walletInfo?.address,
-              pubKey: Buffer.from(walletInfo?.pubkey).toString('base64'),
-              isKeystone: '',
-              isNanoLedger: false,
-              name: walletInfo?.address || '',
-            },
+            walletInfo: serializedWalletInfo,
             network: data.network,
           };
 

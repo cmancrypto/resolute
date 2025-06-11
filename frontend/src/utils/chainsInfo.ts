@@ -28,7 +28,7 @@ export const networks: Network[] = [
     config: {
       chainId: 'prysm-devnet-1',
       chainName: 'PrysmDevnet',
-      rest: 'https://prysm-api-devnet.kleomedes.network',
+      rest: 'http://localhost:1323',
       rpc: 'https://prysm-rpc-devnet.kleomedes.network',
       restURIs: [
         '/prysm-api',

@@ -106,7 +106,7 @@ func ParseConfig() (Config, error) {
 			cfg.MINTSCAN_TOKEN = MintscanToken{
 				Token: viper.GetString("production.mintscanToken"),
 			}
-			cfg.REDIS_URI = viper.GetString("production.redisUri")
+			cfg.REDIS_URI = viper.GetString("dev.redisUri")
 		}
 
 	default:

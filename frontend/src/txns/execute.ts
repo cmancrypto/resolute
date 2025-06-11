@@ -85,20 +85,28 @@ export function fee(
 export async function getWalletAmino(
   chainID: string
 ): Promise<
-  [OfflineAminoSigner, { address: string; algo: string; pubKey: Uint32Array }]
+  [OfflineAminoSigner, { address: string; algo: string; pubKey: string }]
 > {
   if (isMetaMaskWallet()) {
     await window.ethereum.enable(chainID);
     const offlineSigner = new CosmjsOfflineSigner(chainID)
     const accounts = await offlineSigner.getAccounts();
-    return [offlineSigner, { address: accounts[0].address, algo: accounts[0].algo, pubKey: new Uint32Array(accounts[0].pubkey) }];
+    return [offlineSigner, { 
+      address: accounts[0].address, 
+      algo: accounts[0].algo, 
+      pubKey: Buffer.from(accounts[0].pubkey).toString('base64')
+    }];
   } else {
     await window.wallet.enable(chainID);
     const offlineSigner = window.wallet.getOfflineSignerOnlyAmino(chainID);
     const accounts = await offlineSigner.getAccounts();
-    return [offlineSigner, accounts[0]];
+    // Ensure pubKey is serializable
+    const serializedAccount = {
+      ...accounts[0],
+      pubKey: Buffer.from(accounts[0].pubkey).toString('base64')
+    };
+    return [offlineSigner, serializedAccount];
   }
-
 }
 
 export async function getWalletDirect(
@@ -106,13 +114,18 @@ export async function getWalletDirect(
 ): Promise<
   [
     OfflineAminoSigner & OfflineDirectSigner,
-    { address: string; algo: string; pubKey: Uint32Array },
+    { address: string; algo: string; pubKey: string },
   ]
 > {
   await window.wallet.enable(chainID);
   const offlineSigner = window.wallet.getOfflineSigner(chainID);
   const accounts = await offlineSigner.getAccounts();
-  return [offlineSigner, accounts[0]];
+  // Ensure pubKey is serializable
+  const serializedAccount = {
+    ...accounts[0],
+    pubKey: Buffer.from(accounts[0].pubkey).toString('base64')
+  };
+  return [offlineSigner, serializedAccount];
 }
 
 export function isWalletInstalled(): boolean {
