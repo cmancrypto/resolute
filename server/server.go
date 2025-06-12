@@ -165,6 +165,59 @@ func main() {
 		})
 	})
 
+	// Debug endpoint for transaction testing
+	e.POST("/debug/tx", func(c echo.Context) error {
+		chainId := c.QueryParam("chain")
+		if chainId == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Missing chain parameter",
+			})
+		}
+
+		// Get chain details
+		chanDetails := clients.GetChain(chainId)
+		if chanDetails == nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Chain not found",
+				"details": fmt.Sprintf("No configuration found for chain: %s", chainId),
+			})
+		}
+
+		// Read and log the request body
+		body, err := ioutil.ReadAll(c.Request().Body)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Failed to read request body",
+				"details": err.Error(),
+			})
+		}
+
+		// Parse the transaction request
+		var txRequest map[string]interface{}
+		if err := json.Unmarshal(body, &txRequest); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Invalid JSON in request body",
+				"details": err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Transaction debug info",
+			"chain_config": map[string]interface{}{
+				"chainId":   chanDetails.ChainId,
+				"restURI":   chanDetails.RestURI,
+				"sourceEnd": chanDetails.SourceEnd,
+			},
+			"request_info": map[string]interface{}{
+				"body_size":    len(body),
+				"content_type": c.Request().Header.Get("Content-Type"),
+				"user_agent":   c.Request().Header.Get("User-Agent"),
+			},
+			"tx_request": txRequest,
+			"target_url": chanDetails.RestURI + "/cosmos/tx/v1beta1/txs",
+		})
+	})
+
 	e.POST("/cosmos/tx/v1beta1/txs", proxyHandler1)
 
 	e.Any("/*", proxyHandler)
@@ -218,6 +271,9 @@ func proxyHandler1(c echo.Context) error {
 		})
 	}
 
+	// Log the request body for debugging
+	log.Printf("POST /cosmos/tx/v1beta1/txs - Mode: %s, TxBytes length: %d", reqBody.Mode, len(reqBody.TxBytes))
+
 	// Convert the struct to JSON
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
@@ -240,9 +296,9 @@ func proxyHandler1(c echo.Context) error {
 		})
 	}
 
-	// URL to which the POST request will be sent
+	// URL to which the POST request will be sent (WITHOUT the chain parameter)
 	targetURL := chanDetails.RestURI + "/cosmos/tx/v1beta1/txs"
-	log.Printf("Proxying request to: %s", targetURL)
+	log.Printf("Proxying POST request to: %s", targetURL)
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("POST", targetURL, bytes.NewBuffer(jsonData))
@@ -254,9 +310,12 @@ func proxyHandler1(c echo.Context) error {
 		})
 	}
 
-	// Set the Content-Type header
+	// Set headers
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "Resolute-Proxy/1.0")
 
+	// Add authorization if needed
 	if chanDetails.SourceEnd == "mintscan" {
 		authorizationToken := fmt.Sprintf("Bearer %s", config.MINTSCAN_TOKEN.Token)
 		req.Header.Add("Authorization", authorizationToken)
@@ -283,10 +342,32 @@ func proxyHandler1(c echo.Context) error {
 	}
 	defer resp.Body.Close()
 
-	log.Printf("Received response from %s with status: %d", targetURL, resp.StatusCode)
+	log.Printf("Received response from %s with status: %d, content-type: %s", targetURL, resp.StatusCode, resp.Header.Get("Content-Type"))
+
+	// Read the response body (handle compression if needed)
+	var reader io.ReadCloser
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(resp.Body)
+		if err != nil {
+			log.Printf("Failed to create gzip reader for response from %s: %v", targetURL, err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to decompress response",
+				"details": err.Error(),
+			})
+		}
+		defer reader.Close()
+		log.Printf("Decompressing gzip response")
+	case "br":
+		reader = ioutil.NopCloser(brotli.NewReader(resp.Body))
+		defer reader.Close()
+		log.Printf("Decompressing brotli response")
+	default:
+		reader = resp.Body
+	}
 
 	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(reader)
 	if err != nil {
 		log.Printf("Failed to read response body from %s: %v", targetURL, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -295,12 +376,24 @@ func proxyHandler1(c echo.Context) error {
 		})
 	}
 
-	// If the upstream service returned an error, log it and pass it through
+	// Log the response for debugging
 	if resp.StatusCode >= 400 {
 		log.Printf("Upstream service error from %s (status %d): %s", targetURL, resp.StatusCode, string(body))
+	} else {
+		log.Printf("Successful response from %s (status %d), body length: %d", targetURL, resp.StatusCode, len(body))
 	}
 
-	// Respond back to the original request with the same status code from upstream
+	// Parse and return JSON response properly
+	if resp.Header.Get("Content-Type") == "application/json" || resp.Header.Get("Content-Type") == "application/json; charset=utf-8" {
+		var jsonResponse interface{}
+		if err := json.Unmarshal(body, &jsonResponse); err == nil {
+			return c.JSON(resp.StatusCode, jsonResponse)
+		} else {
+			log.Printf("Failed to parse JSON response from %s: %v", targetURL, err)
+		}
+	}
+	
+	// Fall back to returning raw response with proper status code
 	return c.JSONBlob(resp.StatusCode, body)
 }
 
