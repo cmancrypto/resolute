@@ -49,14 +49,16 @@ func GetValue(key string) (string, error) {
 }
 
 func GetChain(chainId string) *config.ChainConfig {
+	log.Printf("Looking up chain configuration for chainId: %s", chainId)
+	
 	data, err := GetValue("chains")
 	if err != nil {
-		fmt.Println("Error fetching chains from Redis:", err)
+		log.Printf("Error fetching chains from Redis for chainId %s: %v", chainId, err)
 		return nil
 	}
 
 	if data == "" {
-		fmt.Println("No chains found in Redis")
+		log.Printf("No chains found in Redis for chainId %s", chainId)
 		return nil
 	}
 
@@ -64,15 +66,25 @@ func GetChain(chainId string) *config.ChainConfig {
 
 	e := json.Unmarshal([]byte(data), &chains)
 	if e != nil {
-		fmt.Println("Error while unmarshal chain info ", e.Error())
+		log.Printf("Error while unmarshaling chain info for chainId %s: %v", chainId, e)
 		return nil
 	}
 
+	log.Printf("Found %d chains in Redis, searching for chainId: %s", len(chains), chainId)
+
 	for _, c := range chains {
 		if c.ChainId == chainId {
+			log.Printf("Found chain configuration for %s: RestURI=%s, SourceEnd=%s", chainId, c.RestURI, c.SourceEnd)
 			return &c
 		}
 	}
+
+	// Log available chains for debugging
+	availableChains := make([]string, len(chains))
+	for i, c := range chains {
+		availableChains[i] = c.ChainId
+	}
+	log.Printf("Chain %s not found. Available chains: %v", chainId, availableChains)
 
 	return nil
 }

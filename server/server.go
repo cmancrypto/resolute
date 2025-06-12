@@ -39,7 +39,7 @@ func init() {
 
 func main() {
 	e := echo.New()
-	e.Logger.SetLevel(log.ERROR)
+	e.Logger.SetLevel(log.INFO)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
@@ -104,6 +104,32 @@ func main() {
 	e.GET("/tokens-info", h.GetTokensInfo)
 	e.GET("/tokens-info/:denom", h.GetTokenInfo)
 
+	// Debug endpoint to list available chains
+	e.GET("/debug/chains", func(c echo.Context) error {
+		chains := clients.GetChains()
+		if chains == nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to get chains from Redis",
+			})
+		}
+		
+		chainInfo := make([]map[string]interface{}, len(chains))
+		for i, chain := range chains {
+			chainInfo[i] = map[string]interface{}{
+				"chainId":     chain.ChainId,
+				"restURI":     chain.RestURI,
+				"rpcURI":      chain.RpcURI,
+				"sourceEnd":   chain.SourceEnd,
+				"checkStatus": chain.CheckStatus,
+			}
+		}
+		
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"total_chains": len(chains),
+			"chains": chainInfo,
+		})
+	})
+
 	e.POST("/cosmos/tx/v1beta1/txs", proxyHandler1)
 
 	e.Any("/*", proxyHandler)
@@ -134,7 +160,11 @@ func main() {
 func proxyHandler1(c echo.Context) error {
 	config, err := config.ParseConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to parse config in proxyHandler1: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Configuration error",
+			"details": err.Error(),
+		})
 	}
 
 	type RequestBody struct {
@@ -146,28 +176,47 @@ func proxyHandler1(c echo.Context) error {
 
 	// Bind the request body to the struct
 	if err := c.Bind(reqBody); err != nil {
-		return c.String(http.StatusBadRequest, "Invalid request")
+		log.Printf("Failed to bind request body in proxyHandler1: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Invalid request body",
+			"details": err.Error(),
+		})
 	}
 
 	// Convert the struct to JSON
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error encoding JSON")
+		log.Printf("Failed to marshal request body in proxyHandler1: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Error encoding JSON",
+			"details": err.Error(),
+		})
 	}
 
-	chanDetails := clients.GetChain(c.QueryParam("chain"))
-
+	chainId := c.QueryParam("chain")
+	log.Printf("Looking up chain details for chainId: %s", chainId)
+	
+	chanDetails := clients.GetChain(chainId)
 	if chanDetails == nil {
-		return c.String(http.StatusInternalServerError, "Failed to get the server")
+		log.Printf("Failed to get chain details for chainId: %s", chainId)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Chain not found",
+			"details": fmt.Sprintf("No configuration found for chain: %s", chainId),
+		})
 	}
 
 	// URL to which the POST request will be sent
 	targetURL := chanDetails.RestURI + "/cosmos/tx/v1beta1/txs"
+	log.Printf("Proxying request to: %s", targetURL)
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("POST", targetURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error creating request")
+		log.Printf("Failed to create HTTP request to %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Error creating request",
+			"details": err.Error(),
+		})
 	}
 
 	// Set the Content-Type header
@@ -175,60 +224,96 @@ func proxyHandler1(c echo.Context) error {
 
 	if chanDetails.SourceEnd == "mintscan" {
 		authorizationToken := fmt.Sprintf("Bearer %s", config.MINTSCAN_TOKEN.Token)
-
 		req.Header.Add("Authorization", authorizationToken)
+		log.Printf("Added Mintscan authorization for chain %s", chainId)
 	}
 
 	if chanDetails.SourceEnd == "numia" {
 		bearerToken := config.NUMIA_BEARER_TOKEN.Token
 		var authorization = "Bearer " + bearerToken
-
 		req.Header.Add("Authorization", authorization)
+		log.Printf("Added Numia authorization for chain %s", chainId)
 	}
 
 	// Create a new HTTP client and send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error sending request")
+		log.Printf("Failed to send HTTP request to %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Error sending request",
+			"details": err.Error(),
+			"target_url": targetURL,
+		})
 	}
 	defer resp.Body.Close()
+
+	log.Printf("Received response from %s with status: %d", targetURL, resp.StatusCode)
 
 	// Read the response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error reading response")
+		log.Printf("Failed to read response body from %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Error reading response",
+			"details": err.Error(),
+		})
 	}
 
-	// Respond back to the original request
-	return c.JSON(http.StatusOK, string(body))
+	// If the upstream service returned an error, log it and pass it through
+	if resp.StatusCode >= 400 {
+		log.Printf("Upstream service error from %s (status %d): %s", targetURL, resp.StatusCode, string(body))
+	}
+
+	// Respond back to the original request with the same status code from upstream
+	return c.JSONBlob(resp.StatusCode, body)
 }
 
 func proxyHandler(c echo.Context) error {
 	config, err := config.ParseConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to parse config in proxyHandler: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Configuration error",
+			"details": err.Error(),
+		})
 	}
 
-	chanDetails := clients.GetChain(c.QueryParam("chain"))
-
+	chainId := c.QueryParam("chain")
+	requestPath := c.Request().URL.Path
+	requestMethod := c.Request().Method
+	
+	log.Printf("Proxying %s request to path: %s for chain: %s", requestMethod, requestPath, chainId)
+	
+	chanDetails := clients.GetChain(chainId)
 	if chanDetails == nil {
-		return c.String(http.StatusInternalServerError, "Failed to get the server")
+		log.Printf("Failed to get chain details for chainId: %s", chainId)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Chain not found",
+			"details": fmt.Sprintf("No configuration found for chain: %s", chainId),
+		})
 	}
+	
 	// Construct the target URL based on the incoming request
-	targetBase := chanDetails.RestURI // Change this to your target service base URL
-
+	targetBase := chanDetails.RestURI
 	targetURL := targetBase + c.Request().URL.Path
 	if c.Request().URL.RawQuery != "" {
 		targetURL += "?" + c.Request().URL.RawQuery
 	}
+	
+	log.Printf("Proxying to target URL: %s", targetURL)
 
 	// Create a new request to the target URL
 	req, err := http.NewRequest(c.Request().Method, targetURL, c.Request().Body)
 	if err != nil {
-		log.Printf("Failed to create request: %v", err)
-		return c.String(http.StatusInternalServerError, "Failed to create request")
+		log.Printf("Failed to create request to %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to create request",
+			"details": err.Error(),
+			"target_url": targetURL,
+		})
 	}
+	
 	// Forward headers from the original request
 	for name, values := range c.Request().Header {
 		for _, value := range values {
@@ -240,24 +325,31 @@ func proxyHandler(c echo.Context) error {
 	// Add Authorization header
 	if chanDetails.SourceEnd == "mintscan" {
 		authorizationToken := fmt.Sprintf("Bearer %s", config.MINTSCAN_TOKEN.Token)
-		req.Header.Add("Authorization", authorizationToken) // Change this to your actual token
+		req.Header.Add("Authorization", authorizationToken)
+		log.Printf("Added Mintscan authorization for chain %s", chainId)
 	}
 
 	if chanDetails.SourceEnd == "numia" {
 		bearerToken := config.NUMIA_BEARER_TOKEN.Token
 		var authorization = "Bearer " + bearerToken
-
 		req.Header.Add("Authorization", authorization)
+		log.Printf("Added Numia authorization for chain %s", chainId)
 	}
 
 	// Make the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Failed to make request: %v", err)
-		return c.String(http.StatusInternalServerError, "Failed to make request")
+		log.Printf("Failed to make request to %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to make request",
+			"details": err.Error(),
+			"target_url": targetURL,
+		})
 	}
 	defer resp.Body.Close()
+
+	log.Printf("Received response from %s with status: %d", targetURL, resp.StatusCode)
 
 	// Check the content encoding and decode accordingly
 	var reader io.ReadCloser
@@ -265,8 +357,11 @@ func proxyHandler(c echo.Context) error {
 	case "gzip":
 		reader, err = gzip.NewReader(resp.Body)
 		if err != nil {
-			log.Printf("Failed to create gzip reader: %v", err)
-			return c.String(http.StatusInternalServerError, "Failed to decompress response")
+			log.Printf("Failed to create gzip reader for response from %s: %v", targetURL, err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to decompress response",
+				"details": err.Error(),
+			})
 		}
 		defer reader.Close()
 	case "br":
@@ -279,8 +374,16 @@ func proxyHandler(c echo.Context) error {
 	// Read the decompressed or raw body
 	bodyBytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		log.Printf("Failed to read response body: %v", err)
-		return c.String(http.StatusInternalServerError, "Failed to read response body")
+		log.Printf("Failed to read response body from %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to read response body",
+			"details": err.Error(),
+		})
+	}
+
+	// If the upstream service returned an error, log it
+	if resp.StatusCode >= 400 {
+		log.Printf("Upstream service error from %s (status %d): %s", targetURL, resp.StatusCode, string(bodyBytes))
 	}
 
 	// Set content type and response
@@ -288,20 +391,12 @@ func proxyHandler(c echo.Context) error {
 	c.Response().WriteHeader(resp.StatusCode)
 	_, err = c.Response().Writer.Write(bodyBytes)
 	if err != nil {
-		log.Printf("Failed to write response body: %v", err)
-		return c.String(http.StatusInternalServerError, "Failed to write response body")
+		log.Printf("Failed to write response body from %s: %v", targetURL, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to write response body",
+			"details": err.Error(),
+		})
 	}
 
 	return nil
-
-	// c.Response().WriteHeader(resp.StatusCode)
-
-	// // Copy the response body to the original response
-	// _, err = io.Copy(c.Response().Writer, resp.Body)
-	// if err != nil {
-	// 	log.Printf("Failed to read response body: %v", err)
-	// 	return c.String(http.StatusInternalServerError, "Failed to read response body")
-	// }
-
-	// return nil
 }

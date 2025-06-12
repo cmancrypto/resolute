@@ -313,5 +313,15 @@
       "https://api-sentinel.chainvibes.com"
     ],
     "sourceEnd": "" 
+  },
+  {
+    "chainId": "prysm-devnet-1",
+    "restURI": "https://prysm-api-devnet.kleomedes.network",
+    "checkStatus": true,
+    "rpcURI": "",
+    "restURIs": [
+      "https://prysm-api-devnet.kleomedes.network"
+    ],
+    "sourceEnd": "" 
   }
 ]
