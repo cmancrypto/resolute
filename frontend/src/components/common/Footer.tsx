@@ -11,13 +11,11 @@ const Footer = () => {
             height={20}
             alt="resolute-logo"
           /> */}
-        <p className="text-h1 !font-semibold tracking-[1.5px]">RESOLUTE</p>
-        <p className="text-b1 opacity-50">Powered by Vitwit</p>
+        <p className="text-h1 !font-semibold tracking-[1.5px]">PARITYSCAN</p>
       </div>
 
       <div className="text-b1">
-        Vitwit is a leading Cosmos dev agency and validator company. Proudly
-        serving as one of the core contributors to the Cosmos SDK.
+        ParityScan is a fork of the Resolute project by VitWit with added functionality using SkipGo and built to support Prysm. 
       </div>
       <div className="flex gap-10 justify-between">
         <a
