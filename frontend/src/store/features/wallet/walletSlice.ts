@@ -72,6 +72,7 @@ export const establishWalletConnection = createAsyncThunk(
       window.wallet.defaultOptions = {
         sign: {
           preferNoSetMemo: true,
+          preferNoSetFee: false,
           disableBalanceCheck: true,
         },
       };
@@ -196,6 +197,7 @@ export const establishMetamaskConnection = createAsyncThunk(
       window.wallet.defaultOptions = {
         sign: {
           preferNoSetMemo: true,
+          preferNoSetFee: false,
           disableBalanceCheck: true,
         },
       };

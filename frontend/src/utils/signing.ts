@@ -143,6 +143,7 @@ export const signAndBroadcast = async (
   rpc?: string,
   restURLs?: Array<string>
 ): Promise<ParsedTxResponse> => {
+  console.log('signAndBroadcast inputs:', { gas, gasPrice, chainId });
   let signer: OfflineSigner;
   let client: SigningCosmWasmClient;
 
@@ -174,6 +175,7 @@ export const signAndBroadcast = async (
   aminoTypes = new AminoTypes({ ...defaultConverters });
 
   if (!gas) {
+    console.log('No gas provided, simulating transaction...');
     gas = await simulate(
       restUrl,
       registry,
@@ -186,9 +188,13 @@ export const signAndBroadcast = async (
       chainId,
       granter
     );
+    console.log('Simulated gas value:', gas);
   }
 
   const fee = getFee(gas, gasPrice, granter);
+  console.log('Final fee for transaction:', fee);
+  console.log('Chain ID being used:', chainId);
+  console.log('Gas price being used:', gasPrice);
 
   if (isMetaMaskWallet()) {
     try {
@@ -271,11 +277,13 @@ function calculateFee(
   gasPrice: string,
   granter?: string
 ): StdFee {
+  console.log('Gas calculation inputs:', { gasLimit, gasPrice, granter });
   const decodedGasPrice = GasPrice.fromString(gasPrice);
   const processedGasPrice: { amount: number; denom: string } = {
     amount: decodedGasPrice.amount.toFloatApproximation(),
     denom: decodedGasPrice.denom,
   };
+  console.log('Processed gas price:', processedGasPrice);
 
   let num1;
   if (isMetaMaskWallet()) {
@@ -286,10 +294,11 @@ function calculateFee(
   } else {
     num1 = multiply(processedGasPrice.amount, gasLimit);
   }
+  console.log('Calculated fee amount:', num1);
 
   const num2 = bignumber(num1.toString());
   const amount = ceil(num2);
-  return {
+  const fee = {
     amount: [
       coin(
         format(floor(amount), { notation: 'fixed' }),
@@ -299,10 +308,16 @@ function calculateFee(
     gas: gasLimit.toString(),
     granter: granter,
   };
+  console.log('Final fee object:', fee);
+  return fee;
 }
 
 function getFee(gas: number, gasPrice: string, granter?: string): StdFee {
-  if (!gas) gas = GAS_FEE;
+  console.log('getFee inputs:', { gas, gasPrice, granter });
+  if (!gas) {
+    console.log('No gas provided, using default GAS_FEE:', GAS_FEE);
+    gas = GAS_FEE;
+  }
   return calculateFee(gas, gasPrice, granter);
 }
 
@@ -339,8 +354,20 @@ async function simulate(
   chainId: string,
   granter?: string
 ): Promise<number> {
-  const account = await getAccount(restUrl, address,chainId);
+  console.log('Simulating transaction with inputs:', { 
+    restUrl, 
+    address, 
+    messages, 
+    memo, 
+    modifier, 
+    gasPrice, 
+    chainId 
+  });
+  
+  const account = await getAccount(restUrl, address, chainId);
   const fee = getFee(50_000, gasPrice, granter);
+  console.log('Initial fee for simulation:', fee);
+  
   const amount: Coin[] = fee.amount.map((coin) => {
     return { amount: coin.amount, denom: coin.denom };
   });
@@ -359,13 +386,18 @@ async function simulate(
   };
 
   try {
+    console.log('Sending simulation request to:', `${restUrl}/cosmos/tx/v1beta1/simulate?chain=${chainId}`);
     const estimate = await axios
       .post(restUrl + `/cosmos/tx/v1beta1/simulate?chain=${chainId}`, {
         tx_bytes: toBase64(TxRaw.encode(txBody).finish()),
       })
       .then((el) => el.data.gas_info.gas_used);
-    return estimate * modifier;
+    console.log('Raw gas estimate:', estimate);
+    const finalEstimate = estimate * modifier;
+    console.log('Final gas estimate with modifier:', finalEstimate);
+    return finalEstimate;
   } catch (error) {
+    console.error('Simulation error:', error);
     if (error instanceof AxiosError) {
       throw new Error(error.response?.data?.message || error.message);
     }

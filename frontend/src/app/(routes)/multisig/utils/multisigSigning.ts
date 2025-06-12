@@ -31,7 +31,7 @@ const signTransaction = async (
     window.wallet.defaultOptions = {
       sign: {
         preferNoSetMemo: true,
-        preferNoSetFee: true,
+        preferNoSetFee: false,
         disableBalanceCheck: true,
       },
     };

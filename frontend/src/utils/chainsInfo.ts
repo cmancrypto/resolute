@@ -75,6 +75,7 @@ export const networks: Network[] = [
         coinMinimalDenom: 'uprysm',
         coinDecimals: 6,
       },
+      features: ['stargate', 'ibc-transfer'],
       image: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/testnets/prysmdevnet/images/prysm.svg',
       theme: {
         primaryColor: '#cf654f',
