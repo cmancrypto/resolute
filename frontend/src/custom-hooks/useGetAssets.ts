@@ -1,4 +1,3 @@
-import { AssetConfig } from '@/types/swaps';
 import { useState } from 'react';
 import axios from 'axios';
 import { cleanURL } from '@/utils/util';
@@ -9,6 +8,15 @@ interface TokenData {
   logoURI?: string;
   decimals?: number;
   name?: string;
+}
+
+interface AssetConfig {
+  label: string;
+  symbol: string;
+  logoURI: string;
+  denom: string;
+  decimals: number;
+  name: string;
 }
 
 const useGetAssets = () => {
