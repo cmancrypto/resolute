@@ -35,6 +35,40 @@ func init() {
 	}
 	// Initialize the Redis client
 	clients.InitializeRedis(config.REDIS_URI, "", 0)
+	
+	// Load chains from networks.json into Redis immediately on startup
+	log.Println("Loading chain configurations from networks.json into Redis...")
+	loadChainsIntoRedis()
+}
+
+// loadChainsIntoRedis loads chain configurations from networks.json into Redis
+func loadChainsIntoRedis() {
+	data := config.GetChainAPIs()
+	if data == nil {
+		log.Println("Warning: No chain data found in networks.json")
+		return
+	}
+	
+	// Set default RestURI for each chain (taking the first one from RestURIs)
+	for _, c := range data {
+		if len(c.RestURIs) > 0 && c.RestURI == "" {
+			c.RestURI = c.RestURIs[0]
+		}
+	}
+
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Error marshaling chain data: %v", err)
+		return
+	}
+
+	err = clients.SetValue("chains", string(bytes))
+	if err != nil {
+		log.Printf("Error storing chains in Redis: %v", err)
+		return
+	}
+	
+	log.Printf("Successfully loaded %d chains into Redis", len(data))
 }
 
 func main() {

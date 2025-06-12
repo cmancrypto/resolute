@@ -317,7 +317,7 @@
   {
     "chainId": "prysm-devnet-1",
     "restURI": "https://prysm-api-devnet.kleomedes.network",
-    "checkStatus": true,
+    "checkStatus": false,
     "rpcURI": "",
     "restURIs": [
       "https://prysm-api-devnet.kleomedes.network"
