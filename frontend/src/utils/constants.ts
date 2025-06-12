@@ -271,9 +271,6 @@ export const AXIOS_RETRIES_COUNT = 2;
 export const MAX_TRY_END_POINTS = 1;
 export const NO_FEEGRANTS_BY_ME_TEXT = "You haven't granted any allowance yet";
 export const NO_FEEGRANTS_TO_ME_TEXT = "You don't have any feegrants";
-export const SQUID_ID = process.env.NEXT_PUBLIC_SQUID_ID || '';
-export const SQUID_CLIENT_API = 'https://api.0xsquid.com';
-export const SQUID_CHAINS_API = 'https://v2.api.squidrouter.com/v2/chains';
 export const ALERT_TYPE_MAP: Record<string, string> = {
   success: 'success',
   error: 'error',
@@ -392,11 +389,6 @@ export const TRANSFERS_TYPES: Record<
   single: {
     title: 'Single Transfer',
     description: 'Transfer tokens within or across different networks',
-  },
-  'ibc-swap': {
-    title: 'IBC Swap',
-    description:
-      'Exchange of assets between different networks using the Inter-Blockchain Communication protocol',
   },
   skip: {
     title: 'Skip Transfers',

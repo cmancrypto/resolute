@@ -206,6 +206,7 @@ func main() {
 			"chain_config": map[string]interface{}{
 				"chainId":   chanDetails.ChainId,
 				"restURI":   chanDetails.RestURI,
+				"rpcURI":    chanDetails.RpcURI,
 				"sourceEnd": chanDetails.SourceEnd,
 			},
 			"request_info": map[string]interface{}{
@@ -214,8 +215,56 @@ func main() {
 				"user_agent":   c.Request().Header.Get("User-Agent"),
 			},
 			"tx_request": txRequest,
-			"target_url": chanDetails.RestURI + "/cosmos/tx/v1beta1/txs",
+			"endpoints": map[string]interface{}{
+				"rest_tx_url": chanDetails.RestURI + "/cosmos/tx/v1beta1/txs",
+				"rpc_available": chanDetails.RpcURI != "",
+				"rpc_broadcast_url": chanDetails.RpcURI + "/broadcast_tx_commit",
+			},
 		})
+	})
+
+	// Debug endpoint to test RPC connectivity
+	e.GET("/debug/rpc/:chainId", func(c echo.Context) error {
+		chainId := c.Param("chainId")
+		
+		chanDetails := clients.GetChain(chainId)
+		if chanDetails == nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Chain not found",
+			})
+		}
+
+		result := map[string]interface{}{
+			"chainId": chainId,
+			"restURI": chanDetails.RestURI,
+			"rpcURI":  chanDetails.RpcURI,
+		}
+
+		// Test REST endpoint
+		if chanDetails.RestURI != "" {
+			resp, err := http.Get(chanDetails.RestURI + "/cosmos/base/tendermint/v1beta1/node_info")
+			if err != nil {
+				result["rest_status"] = "error: " + err.Error()
+			} else {
+				result["rest_status"] = fmt.Sprintf("status: %d", resp.StatusCode)
+				resp.Body.Close()
+			}
+		}
+
+		// Test RPC endpoint
+		if chanDetails.RpcURI != "" {
+			resp, err := http.Get(chanDetails.RpcURI + "/status")
+			if err != nil {
+				result["rpc_status"] = "error: " + err.Error()
+			} else {
+				result["rpc_status"] = fmt.Sprintf("status: %d", resp.StatusCode)
+				resp.Body.Close()
+			}
+		} else {
+			result["rpc_status"] = "no RPC URI configured"
+		}
+
+		return c.JSON(http.StatusOK, result)
 	})
 
 	e.POST("/cosmos/tx/v1beta1/txs", proxyHandler1)
@@ -286,7 +335,7 @@ func proxyHandler1(c echo.Context) error {
 
 	chainId := c.QueryParam("chain")
 	log.Printf("Looking up chain details for chainId: %s", chainId)
-	
+
 	chanDetails := clients.GetChain(chainId)
 	if chanDetails == nil {
 		log.Printf("Failed to get chain details for chainId: %s", chainId)
@@ -381,12 +430,33 @@ func proxyHandler1(c echo.Context) error {
 		log.Printf("Upstream service error from %s (status %d): %s", targetURL, resp.StatusCode, string(body))
 	} else {
 		log.Printf("Successful response from %s (status %d), body length: %d", targetURL, resp.StatusCode, len(body))
+		// Also log the actual response body for debugging transactions
+		log.Printf("Response body from %s: %s", targetURL, string(body))
 	}
 
 	// Parse and return JSON response properly
 	if resp.Header.Get("Content-Type") == "application/json" || resp.Header.Get("Content-Type") == "application/json; charset=utf-8" {
 		var jsonResponse interface{}
 		if err := json.Unmarshal(body, &jsonResponse); err == nil {
+			// Check if it's a transaction response with an error
+			if respMap, ok := jsonResponse.(map[string]interface{}); ok {
+				// Check for cosmos transaction response patterns
+				if code, hasCode := respMap["code"]; hasCode {
+					if codeNum, ok := code.(float64); ok && codeNum != 0 {
+						log.Printf("Transaction failed with code %v: %v", code, respMap)
+					}
+				}
+				// Check for other error patterns
+				if txResponse, hasTxResponse := respMap["tx_response"]; hasTxResponse {
+					if trMap, ok := txResponse.(map[string]interface{}); ok {
+						if code, hasCode := trMap["code"]; hasCode {
+							if codeNum, ok := code.(float64); ok && codeNum != 0 {
+								log.Printf("Transaction failed in tx_response with code %v: %v", code, trMap)
+							}
+						}
+					}
+				}
+			}
 			return c.JSON(resp.StatusCode, jsonResponse)
 		} else {
 			log.Printf("Failed to parse JSON response from %s: %v", targetURL, err)
@@ -544,6 +614,25 @@ func proxyHandler(c echo.Context) error {
 	if resp.Header.Get("Content-Type") == "application/json" || resp.Header.Get("Content-Type") == "application/json; charset=utf-8" {
 		var jsonResponse interface{}
 		if err := json.Unmarshal(bodyBytes, &jsonResponse); err == nil {
+			// Check if it's a transaction response with an error
+			if respMap, ok := jsonResponse.(map[string]interface{}); ok {
+				// Check for cosmos transaction response patterns
+				if code, hasCode := respMap["code"]; hasCode {
+					if codeNum, ok := code.(float64); ok && codeNum != 0 {
+						log.Printf("Transaction failed with code %v: %v", code, respMap)
+					}
+				}
+				// Check for other error patterns
+				if txResponse, hasTxResponse := respMap["tx_response"]; hasTxResponse {
+					if trMap, ok := txResponse.(map[string]interface{}); ok {
+						if code, hasCode := trMap["code"]; hasCode {
+							if codeNum, ok := code.(float64); ok && codeNum != 0 {
+								log.Printf("Transaction failed in tx_response with code %v: %v", code, trMap)
+							}
+						}
+					}
+				}
+			}
 			return c.JSON(resp.StatusCode, jsonResponse)
 		}
 	}

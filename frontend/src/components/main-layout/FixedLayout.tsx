@@ -26,7 +26,6 @@ import {
 import { setAllNetworksInfo } from '@/store/features/common/commonSlice';
 import useShortCuts from '@/custom-hooks/useShortCuts';
 import TransactionStatusPopup from '../txn-status-popups/TransactionStatusPopup';
-import IBCSwapTxStatus from '../IBCSwapTxStatus';
 import Footer from '../common/Footer';
 import DynamicSection from './DynamicSection';
 import useInitApp from '@/custom-hooks/common/useInitApp';
@@ -155,7 +154,6 @@ const FixedLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </main>
       <TransactionStatusPopup />
-      <IBCSwapTxStatus />
     </div>
   );
 };

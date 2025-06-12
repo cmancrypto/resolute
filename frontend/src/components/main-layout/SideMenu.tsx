@@ -11,15 +11,12 @@ import { isMetaMaskWallet } from '@/utils/localStorage';
 import { MenuItemI, SIDEBAR_MENU_OPTIONS } from '@/constants/sidebar-options';
 
 const DISABLED_FOR_METAMASK = [
-  'ibc-swap',
-  'authz',
   'feegrant',
   'cosmwasm',
   'multi-send',
   'txn-builder',
 ];
 const DISABLED_FOR_AUTHZ_MODE = [
-  'ibc-swap',
   'feegrant',
   'cosmwasm',
   'history',
@@ -27,8 +24,7 @@ const DISABLED_FOR_AUTHZ_MODE = [
   'txn-builder',
 ];
 const DISABLED_FOR_FEEGRANT_MODE = [
-  'ibc-swap',
-  'authz',
+  'feegrant',
   'cosmwasm',
   'history',
   'txn-builder',
@@ -36,7 +32,7 @@ const DISABLED_FOR_FEEGRANT_MODE = [
 
 const SideMenu = () => {
   const pathName = usePathname();
-  const pathParts = pathName.split('/');
+  const pathParts = pathName?.split('/') || []; 
   const selectedPart = getSelectedPartFromURL(pathParts).toLowerCase();
 
   return (
@@ -163,43 +159,14 @@ const MoreOptions = ({
                   </div>
                 </Tooltip>
               </div>
-              <div
-                className={`flex gap-2 items-center pl-3 ${isDisabled('ibc-swap').disabled ? 'opacity-20 cursor-not-allowed' : ''}`}
-              >
+              <div className="flex gap-2 items-center pl-3">
                 <div className="w-5"></div>
-                <Tooltip
-                  title={isDisabled('ibc-swap').tooltip}
-                  placement="top-end"
+                <div
+                  onClick={() => changeTransfersPath('skip')}
+                  className="cursor-pointer hover:font-semibold"
                 >
-                  <div
-                    onClick={() => {
-                      if (!isDisabled('ibc-swap').disabled)
-                        changeTransfersPath('ibc-swap');
-                    }}
-                    className={`hover:font-semibold ${isDisabled('ibc-swap').disabled ? '!cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    IBC Swap
-                  </div>
-                </Tooltip>
-              </div>
-              <div
-                className={`flex gap-2 items-center pl-3 ${isDisabled('ibc-swap').disabled ? 'opacity-20 cursor-not-allowed' : ''}`}
-              >
-                <div className="w-5"></div>
-                <Tooltip
-                  title={isDisabled('ibc-swap').tooltip}
-                  placement="top-end"
-                >
-                  <div
-                    onClick={() => {
-                      if (!isDisabled('ibc-swap').disabled)
-                        changeTransfersPath('skip');
-                    }}
-                    className={`hover:font-semibold ${isDisabled('ibc-swap').disabled ? '!cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    Skip Transfers
-                  </div>
-                </Tooltip>
+                  Skip Transfers
+                </div>
               </div>
             </div>
           )}

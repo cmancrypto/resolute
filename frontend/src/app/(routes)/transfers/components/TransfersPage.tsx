@@ -3,7 +3,6 @@ import { useAppDispatch, useAppSelector } from '@/custom-hooks/StateHooks';
 import useSortedAssets from '@/custom-hooks/useSortedAssets';
 import { useSearchParams } from 'next/navigation';
 import MultiSendPage from './multi-send/MultiSendPage';
-import IBCSwapPage from './ibc-swaps/IBCSwapPage';
 import SkipTransferPage from './skip-transfers/SkipTransferPage';
 import { setConnectWalletOpen } from '@/store/features/wallet/walletSlice';
 import EmptyScreen from '@/components/common/EmptyScreen';
@@ -17,7 +16,7 @@ const TransfersPage = ({ chainIDs }: { chainIDs: string[] }) => {
     showAvailable: true,
     AuthzSkipIBC: true,
   });
-  const paramsTransferType = useSearchParams().get('type');
+  const paramsTransferType = useSearchParams()?.get('type') || 'single';
 
   const [transferType, setTransferType] = useState('single');
 
@@ -59,7 +58,6 @@ const TransfersPage = ({ chainIDs }: { chainIDs: string[] }) => {
           {transferType === 'multi-send' ? (
             <MultiSendPage chainID={chainIDs[0]} />
           ) : null}
-          {transferType === 'ibc-swap' ? <IBCSwapPage /> : null}
           {transferType === 'skip' ? <SkipTransferPage /> : null}
         </div>
       ) : (

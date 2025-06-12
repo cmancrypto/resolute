@@ -61,9 +61,9 @@ export const networks: Network[] = [
           coinMinimalDenom: 'uprysm',
           coinDecimals: 6,
           gasPriceStep: {
-            low: 0,
-            average: 0,
-            high: 0,
+            low: 0.01,
+            average: 0.025,
+            high: 0.03,
           },
         },
       ],

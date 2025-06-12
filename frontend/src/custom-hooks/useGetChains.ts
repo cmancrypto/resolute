@@ -1,7 +1,13 @@
 import { ChainConfig } from '@/types/swaps';
-import { SQUID_CHAINS_API, SQUID_ID } from '@/utils/constants';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+
+interface ChainData {
+  chainId: string;
+  chainType: string;
+  axelarChainName: string;
+  chainIconURI?: string;
+}
 
 const useGetChains = () => {
   const [chainsInfo, setChainInfo] = useState<ChainConfig[]>([]);
@@ -14,11 +20,8 @@ const useGetChains = () => {
 
   const fetchChainsInfo = async () => {
     try {
-      const result = await axios.get(SQUID_CHAINS_API, {
-        headers: {
-          'x-integrator-id': SQUID_ID,
-        },
-      });
+      // TODO: Replace with new chain info API endpoint
+      const result = await axios.get('YOUR_NEW_CHAINS_API_ENDPOINT');
       const chains: ChainData[] = result.data.chains;
       setChainsData(chains);
       const chainsData = chains

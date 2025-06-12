@@ -1,9 +1,15 @@
 import { AssetConfig } from '@/types/swaps';
 import { useState } from 'react';
-import { TokenData } from '@0xsquid/sdk/dist/types';
 import axios from 'axios';
-import { SQUID_CLIENT_API, SQUID_ID } from '@/utils/constants';
 import { cleanURL } from '@/utils/util';
+
+interface TokenData {
+  symbol?: string;
+  ibcDenom?: string;
+  logoURI?: string;
+  decimals?: number;
+  name?: string;
+}
 
 const useGetAssets = () => {
   const [srcAssetsLoading, setSrcAssetsLoading] = useState(false);
@@ -16,13 +22,9 @@ const useGetAssets = () => {
       } else {
         setDestAssetsLoading(true);
       }
+      // TODO: Replace with new assets API endpoint
       const result = await axios.get(
-        `${cleanURL(SQUID_CLIENT_API)}/v1/tokens?chainId=${chainID}`,
-        {
-          headers: {
-            'x-integrator-id': SQUID_ID,
-          },
-        }
+        `YOUR_NEW_ASSETS_API_ENDPOINT?chainId=${chainID}`
       );
       const assets: TokenData[] = result.data.tokens;
       return assets;
