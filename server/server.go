@@ -332,8 +332,14 @@ func proxyHandler(c echo.Context) error {
 	// Construct the target URL based on the incoming request
 	targetBase := chanDetails.RestURI
 	targetURL := targetBase + c.Request().URL.Path
+	
+	// Filter out the 'chain' parameter and preserve other query parameters
 	if c.Request().URL.RawQuery != "" {
-		targetURL += "?" + c.Request().URL.RawQuery
+		query := c.Request().URL.Query()
+		query.Del("chain") // Remove the chain parameter
+		if len(query) > 0 {
+			targetURL += "?" + query.Encode()
+		}
 	}
 	
 	log.Printf("Proxying to target URL: %s", targetURL)
@@ -349,13 +355,21 @@ func proxyHandler(c echo.Context) error {
 		})
 	}
 	
-	// Forward headers from the original request
+	// Forward headers from the original request, but filter out problematic ones
 	for name, values := range c.Request().Header {
+		// Skip certain headers that shouldn't be forwarded
+		if name == "Host" || name == "Connection" || name == "Accept-Encoding" {
+			continue
+		}
 		for _, value := range values {
 			req.Header.Add(name, value)
 		}
 	}
+	
+	// Set standard headers
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "Resolute-Proxy/1.0")
 
 	// Add Authorization header
 	if chanDetails.SourceEnd == "mintscan" {
@@ -384,9 +398,9 @@ func proxyHandler(c echo.Context) error {
 	}
 	defer resp.Body.Close()
 
-	log.Printf("Received response from %s with status: %d", targetURL, resp.StatusCode)
+	log.Printf("Received response from %s with status: %d, content-type: %s", targetURL, resp.StatusCode, resp.Header.Get("Content-Type"))
 
-	// Check the content encoding and decode accordingly
+	// Read the response body (handle compression if needed)
 	var reader io.ReadCloser
 	switch resp.Header.Get("Content-Encoding") {
 	case "gzip":
@@ -399,9 +413,11 @@ func proxyHandler(c echo.Context) error {
 			})
 		}
 		defer reader.Close()
+		log.Printf("Decompressing gzip response")
 	case "br":
 		reader = ioutil.NopCloser(brotli.NewReader(resp.Body))
 		defer reader.Close()
+		log.Printf("Decompressing brotli response")
 	default:
 		reader = resp.Body
 	}
@@ -421,17 +437,24 @@ func proxyHandler(c echo.Context) error {
 		log.Printf("Upstream service error from %s (status %d): %s", targetURL, resp.StatusCode, string(bodyBytes))
 	}
 
-	// Set content type and response
-	c.Response().Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	c.Response().WriteHeader(resp.StatusCode)
-	_, err = c.Response().Writer.Write(bodyBytes)
-	if err != nil {
-		log.Printf("Failed to write response body from %s: %v", targetURL, err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to write response body",
-			"details": err.Error(),
-		})
+	// Return JSON response properly
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/json"
 	}
-
-	return nil
+	
+	// Set the response headers
+	c.Response().Header().Set("Content-Type", contentType)
+	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+	
+	// If it's JSON content, parse and return as JSON to ensure proper formatting
+	if resp.Header.Get("Content-Type") == "application/json" || resp.Header.Get("Content-Type") == "application/json; charset=utf-8" {
+		var jsonResponse interface{}
+		if err := json.Unmarshal(bodyBytes, &jsonResponse); err == nil {
+			return c.JSON(resp.StatusCode, jsonResponse)
+		}
+	}
+	
+	// Fall back to returning raw bytes with proper status code
+	return c.JSONBlob(resp.StatusCode, bodyBytes)
 }
