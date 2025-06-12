@@ -8,12 +8,13 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/andybalholm/brotli"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/labstack/gommon/log"
+	echolog "github.com/labstack/gommon/log"
 
 	"github.com/vitwit/resolute/server/clients"
 	"github.com/vitwit/resolute/server/config"
@@ -73,7 +74,7 @@ func loadChainsIntoRedis() {
 
 func main() {
 	e := echo.New()
-	e.Logger.SetLevel(log.INFO)
+	e.Logger.SetLevel(echolog.INFO)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
