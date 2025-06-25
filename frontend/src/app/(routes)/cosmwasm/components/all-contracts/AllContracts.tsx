@@ -9,7 +9,8 @@ const AllContracts = (props: { chainID: string }) => {
   const { getChainInfo } = useGetChainInfo();
   const { restURLs, chainName } = getChainInfo(chainID);
 
-  const paramCodeId = useSearchParams().get('code_id');
+  const searchParams = useSearchParams();
+  const paramCodeId = searchParams?.get('code_id') || null;
 
   const [selectedCodeId, setSelectedCodeId] = useState(paramCodeId);
 

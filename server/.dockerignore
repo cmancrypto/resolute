@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Development files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+cache/
+
+# Test files
+*_test.go
+test/
+tests/
+
+# Build artifacts (if any)
+dist/
+build/
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# Dependencies (will be downloaded during build)
+vendor/
+
+# Config (except example.yaml)
+config.yaml 

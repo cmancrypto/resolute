@@ -1,13 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for optimized Docker builds
+  output: 'standalone',
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Add performance optimizations
-  swcMinify: true, // Use SWC for minification
+  
+  // Performance optimizations
+  swcMinify: true, // Use SWC for faster minification
   reactStrictMode: true,
   poweredByHeader: false,
+  
+  // Optimize images
   images: {
+    // Add image optimization settings
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',

@@ -17,7 +17,8 @@ const ChainContracts: React.FC<ChainContractsProps> = ({ network }) => {
   const nameToChainIDs = useAppSelector((state) => state.common.nameToChainIDs);
   const chainName = network.toLowerCase();
   const chainID = nameToChainIDs?.[chainName];
-  const paramTabName = useSearchParams().get('tab');
+  const searchParams = useSearchParams();
+  const paramTabName = searchParams?.get('tab') || '';
 
   if (!chainID) {
     return (
