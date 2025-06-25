@@ -41,6 +41,9 @@ COPY --from=builder /app/app /app
 # Copy config file
 COPY --from=builder /app/config.yaml /config.yaml
 
+# Copy networks.json file
+COPY --from=builder /app/networks.json /networks.json
+
 # Expose port
 EXPOSE 1323
 
