@@ -16,10 +16,16 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+# Force rebuild sharp for Alpine Linux  
+RUN npm rebuild sharp
+
 # Stage 2: Builder  
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+# Install additional packages needed for sharp
+RUN apk add --no-cache libc6-compat
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules

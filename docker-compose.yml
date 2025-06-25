@@ -9,8 +9,7 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - my_network
 
@@ -26,11 +25,6 @@ services:
         condition: service_healthy
     networks:
       - my_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://backend:1323"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   database:
     build:
